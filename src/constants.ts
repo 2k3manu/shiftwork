@@ -1,5 +1,11 @@
 import { Job, Applicant } from './types';
 
+const getFutureDate = (daysAhead: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  return `${d.toLocaleDateString('en-US', { weekday: 'short' })}, ${d.getDate()} ${d.toLocaleDateString('en-US', { month: 'short' })}`;
+};
+
 export const DUMMY_JOBS: Job[] = [
   {
     id: '1',
@@ -8,7 +14,7 @@ export const DUMMY_JOBS: Job[] = [
     isVerified: true,
     type: 'Catering',
     subType: 'Bokeh Serving',
-    date: 'Sun, 11 May',
+    date: getFutureDate(0), // Today
     time: '6 PM–11 PM',
     location: 'Indiranagar',
     distance: '4.5 km',
@@ -29,7 +35,7 @@ export const DUMMY_JOBS: Job[] = [
     isVerified: true,
     type: 'Home Shifting',
     subType: 'Packing',
-    date: 'Mon, 12 May',
+    date: getFutureDate(1), // Tomorrow
     time: '8 AM–2 PM',
     location: 'Whitefield',
     distance: '12.8 km',
@@ -50,7 +56,7 @@ export const DUMMY_JOBS: Job[] = [
     isVerified: true,
     type: 'Catering',
     subType: 'Manual Serving',
-    date: 'Sat, 10 May',
+    date: getFutureDate(2),
     time: '11 AM–5 PM',
     location: 'HSR Layout',
     distance: '2.1 km',
@@ -71,7 +77,7 @@ export const DUMMY_JOBS: Job[] = [
     isVerified: false,
     type: 'Home Shifting',
     subType: 'Moving',
-    date: 'Wed, 14 May',
+    date: getFutureDate(3),
     time: '9 AM–3 PM',
     location: 'Jayanagar',
     distance: '6.7 km',
@@ -92,7 +98,7 @@ export const DUMMY_JOBS: Job[] = [
     isVerified: true,
     type: 'Catering',
     subType: 'Bokeh Serving',
-    date: 'Fri, 16 May',
+    date: getFutureDate(4),
     time: '5 PM–10 PM',
     location: 'Koramangala',
     distance: '1.5 km',

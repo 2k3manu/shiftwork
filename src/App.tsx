@@ -43,17 +43,140 @@ import { DUMMY_JOBS, DUMMY_APPLICANTS } from './constants';
 // --- Utility ---
 const cn = (...classes: (string | boolean | undefined)[]) => classes.filter(Boolean).join(' ');
 
+// --- Shared Components ---
+
+const PhoneFrame = ({ children, hideNav = false, currentScreen, role, navigate }: { children: React.ReactNode, hideNav?: boolean, currentScreen: string, role: UserRole, navigate: (screen: Screen) => void }) => (
+  <div className="min-h-screen bg-[#E5E9F0] flex items-center justify-center sm:py-8">
+    <div className="phone-frame flex flex-col">
+      {/* Status Bar */}
+      <div className="status-bar group">
+        <span className="font-bold">9:41</span>
+        <div className="flex items-center gap-1.5 grayscale opacity-20 group-hover:opacity-100 transition-opacity">
+          <div className="w-4 h-4 bg-black rounded-full text-[8px] flex items-center justify-center text-white">●</div>
+          <div className="w-4 h-4 bg-black rounded-full"></div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto no-scrollbar relative">
+        {children}
+      </div>
+
+      {/* Bottom Nav */}
+      {!hideNav && !['splash', 'role_selection', 'auth', 'worker_setup', 'tender_setup'].includes(currentScreen) && (
+        <div className="h-20 bg-white border-t border-gray-100 flex items-center justify-around px-2 safe-area-bottom">
+          <NavIcon 
+            icon={<Home size={24} />} 
+            label="Home" 
+            active={currentScreen === (role === 'worker' ? 'worker_home' : 'tender_home')} 
+            onClick={() => navigate(role === 'worker' ? 'worker_home' : 'tender_home')}
+          />
+          <NavIcon 
+            icon={role === 'worker' ? <Briefcase size={24} /> : <Menu size={24} />} 
+            label={role === 'worker' ? "My Jobs" : "Listings"} 
+            active={currentScreen === 'my_jobs' || currentScreen === 'listings'} 
+            onClick={() => navigate(role === 'worker' ? 'my_jobs' : 'tender_home')}
+          />
+          <NavIcon 
+            icon={<MessageCircle size={24} />} 
+            label={role === 'worker' ? "Co-Workers" : "Applicants"} 
+            active={currentScreen === 'coworker_connect' || currentScreen === 'applicant_review'} 
+            onClick={() => navigate(role === 'worker' ? 'coworker_connect' : 'applicant_review')}
+          />
+          <NavIcon 
+            icon={<Star size={24} />} 
+            label="Matches" 
+            active={currentScreen === 'match_confirmed'} 
+            onClick={() => navigate('match_confirmed')}
+          />
+          <NavIcon 
+            icon={<User size={24} />} 
+            label="Profile" 
+            active={currentScreen === (role === 'worker' ? 'worker_profile' : 'tender_profile')} 
+            onClick={() => navigate(role === 'worker' ? 'worker_profile' : 'tender_profile')}
+          />
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+const NavIcon = ({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void }) => (
+  <button onClick={onClick} className="flex flex-col items-center gap-1 min-w-[64px]">
+    <div className={cn("transition-colors", active ? "text-accent" : "text-gray-400")}>
+      {icon}
+    </div>
+    <span className={cn("text-[10px] font-medium", active ? "text-accent" : "text-gray-400")}>{label}</span>
+  </button>
+);
+
+const Button = ({ 
+  children, 
+  variant = 'primary', 
+  onClick, 
+  className,
+  disabled = false
+}: { 
+  children: React.ReactNode, 
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost',
+  onClick?: () => void,
+  className?: string,
+  disabled?: boolean
+}) => {
+  const variants = {
+    primary: 'bg-accent text-white shadow-lg shadow-orange-200',
+    secondary: 'bg-primary text-white shadow-lg shadow-blue-200',
+    outline: 'border-2 border-primary text-primary',
+    danger: 'bg-error text-white shadow-lg shadow-red-200',
+    ghost: 'text-primary'
+  };
+  
+  return (
+    <motion.button
+      whileTap={{ scale: 0.97 }}
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "w-full py-4 rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+        variants[variant],
+        className
+      )}
+    >
+      {children}
+    </motion.button>
+  );
+};
+
+const ProfileStat = ({ label, value }: { label: string, value: string }) => (
+  <div className="bg-bg-light p-3 rounded-2xl flex flex-col items-center">
+    <span className="text-[10px] font-bold text-text-secondary uppercase mb-1">{label}</span>
+    <span className="text-lg font-bold text-primary">{value}</span>
+  </div>
+);
+
+const ReviewItem = ({ name, rating, text, date }: { name: string, rating: number, text: string, date: string }) => (
+  <div className="p-4 bg-white rounded-xl shadow-sm space-y-2">
+    <div className="flex justify-between items-start">
+      <h4 className="font-bold text-sm">{name}</h4>
+      <span className="text-[10px] text-gray-400">{date}</span>
+    </div>
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map(i => <Star key={i} size={12} className={cn(i <= rating ? "text-yellow-400 fill-current" : "text-gray-200")} />)}
+    </div>
+    <p className="text-xs text-text-secondary">{text}</p>
+  </div>
+);
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('splash');
   const [role, setRole] = useState<UserRole>(null);
-  const [isAvailable, setIsAvailable] = useState(true);
   const [workerAvailability, setWorkerAvailability] = useState<Record<string, {active: boolean, start: string, end: string}>>(() => {
     const initial: Record<string, {active: boolean, start: string, end: string}> = {};
     for (let i = 0; i < 7; i++) {
         const d = new Date();
         d.setDate(d.getDate() + i);
         const dateStr = d.toISOString().split('T')[0];
-        initial[dateStr] = { active: i < 5, start: '09:00', end: '18:00' };
+        initial[dateStr] = { active: false, start: '09:00', end: '18:00' };
     }
     return initial;
   });
@@ -68,11 +191,25 @@ export default function App() {
   const [workerFood, setWorkerFood] = useState('');
   const [workerUpi, setWorkerUpi] = useState('');
 
+  const isAvailableToday = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return workerAvailability[today]?.active ?? false;
+  }, [workerAvailability]);
+
+  const hasAnyAvailability = useMemo(() => {
+    return Object.values(workerAvailability).some(day => day.active);
+  }, [workerAvailability]);
+
   const [tenderName, setTenderName] = useState('');
   const [tenderGst, setTenderGst] = useState('');
   const [tenderServices, setTenderServices] = useState<string[]>([]);
   const [tenderLocation, setTenderLocation] = useState('Indiranagar');
   const [tenderSize, setTenderSize] = useState('2-10 Workers');
+
+  const [homeSearch, setHomeSearch] = useState('');
+  const [homeFilter, setHomeFilter] = useState('All Gigs');
+  const [homeSortBy, setHomeSortBy] = useState('Recommended');
+  const [homeDateFilter, setHomeDateFilter] = useState<string | null>(null);
 
   // Auto-transition from splash
   useEffect(() => {
@@ -84,110 +221,6 @@ export default function App() {
 
   const navigate = (screen: Screen) => {
     setCurrentScreen(screen);
-  };
-
-  // --- Shared Components ---
-
-  const PhoneFrame = ({ children, hideNav = false }: { children: React.ReactNode, hideNav?: boolean }) => (
-    <div className="min-h-screen bg-[#E5E9F0] flex items-center justify-center sm:py-8">
-      <div className="phone-frame flex flex-col">
-        {/* Status Bar */}
-        <div className="status-bar group">
-          <span className="font-bold">9:41</span>
-          <div className="flex items-center gap-1.5 grayscale opacity-20 group-hover:opacity-100 transition-opacity">
-            <div className="w-4 h-4 bg-black rounded-full text-[8px] flex items-center justify-center text-white">●</div>
-            <div className="w-4 h-4 bg-black rounded-full"></div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto no-scrollbar relative">
-          {children}
-        </div>
-
-        {/* Bottom Nav */}
-        {!hideNav && !['splash', 'role_selection', 'auth', 'worker_setup', 'tender_setup'].includes(currentScreen) && (
-          <div className="h-20 bg-white border-t border-gray-100 flex items-center justify-around px-2 safe-area-bottom">
-            <NavIcon 
-              icon={<Home size={24} />} 
-              label="Home" 
-              active={currentScreen === (role === 'worker' ? 'worker_home' : 'tender_home')} 
-              onClick={() => navigate(role === 'worker' ? 'worker_home' : 'tender_home')}
-            />
-            <NavIcon 
-              icon={role === 'worker' ? <Briefcase size={24} /> : <Menu size={24} />} 
-              label={role === 'worker' ? "My Jobs" : "Listings"} 
-              active={currentScreen === 'my_jobs' || currentScreen === 'listings'} 
-              onClick={() => navigate(role === 'worker' ? 'my_jobs' : 'tender_home')}
-            />
-            <NavIcon 
-              icon={<MessageCircle size={24} />} 
-              label={role === 'worker' ? "Co-Workers" : "Applicants"} 
-              active={currentScreen === 'coworker_connect' || currentScreen === 'applicant_review'} 
-              onClick={() => navigate(role === 'worker' ? 'coworker_connect' : 'applicant_review')}
-            />
-            <NavIcon 
-              icon={<Star size={24} />} 
-              label="Matches" 
-              active={currentScreen === 'match_confirmed'} 
-              onClick={() => navigate('match_confirmed')}
-            />
-            <NavIcon 
-              icon={<User size={24} />} 
-              label="Profile" 
-              active={currentScreen === (role === 'worker' ? 'worker_profile' : 'tender_profile')} 
-              onClick={() => navigate(role === 'worker' ? 'worker_profile' : 'tender_profile')}
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const NavIcon = ({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void }) => (
-    <button onClick={onClick} className="flex flex-col items-center gap-1 min-w-[64px]">
-      <div className={cn("transition-colors", active ? "text-accent" : "text-gray-400")}>
-        {icon}
-      </div>
-      <span className={cn("text-[10px] font-medium", active ? "text-accent" : "text-gray-400")}>{label}</span>
-    </button>
-  );
-
-  const Button = ({ 
-    children, 
-    variant = 'primary', 
-    onClick, 
-    className,
-    disabled = false
-  }: { 
-    children: React.ReactNode, 
-    variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost',
-    onClick?: () => void,
-    className?: string,
-    disabled?: boolean
-  }) => {
-    const variants = {
-      primary: 'bg-accent text-white shadow-lg shadow-orange-200',
-      secondary: 'bg-primary text-white shadow-lg shadow-blue-200',
-      outline: 'border-2 border-primary text-primary',
-      danger: 'bg-error text-white shadow-lg shadow-red-200',
-      ghost: 'text-primary'
-    };
-    
-    return (
-      <motion.button
-        whileTap={{ scale: 0.97 }}
-        onClick={onClick}
-        disabled={disabled}
-        className={cn(
-          "w-full py-4 rounded-lg font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed",
-          variants[variant],
-          className
-        )}
-      >
-        {children}
-      </motion.button>
-    );
   };
 
   // --- Screens ---
@@ -555,52 +588,44 @@ export default function App() {
             <div className="p-4 bg-white rounded-xl shadow-sm space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h4 className="font-bold">Available for work</h4>
-                  <p className="text-xs text-text-secondary">Set your daily hours</p>
-                </div>
-                <div 
-                  onClick={() => setIsAvailable(!isAvailable)}
-                  className={cn("w-12 h-6 rounded-full p-1 cursor-pointer transition-colors", isAvailable ? "bg-success" : "bg-gray-300")}
-                >
-                  <div className={cn("w-4 h-4 bg-white rounded-full transition-transform", isAvailable ? "translate-x-6" : "translate-x-0")} />
+                  <h4 className="font-bold">When can you work?</h4>
+                  <p className="text-xs text-text-secondary">Tap a day to mark yourself available. You can always change this later.</p>
                 </div>
               </div>
 
-              {isAvailable && (
-                <div className="space-y-3 border-t border-gray-100 pt-4">
-                  {Object.entries(workerAvailability).map(([day, auth]: [string, any]) => {
-                    const dateObj = new Date(day);
-                    return (
-                    <div key={day} className="flex items-center gap-2">
-                       <button 
-                         onClick={() => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], active: !prev[day].active}}))}
-                         className={cn("w-16 py-1.5 rounded-lg text-[10px] font-bold transition-colors", auth.active ? "bg-accent text-white" : "bg-gray-100 text-gray-400")}
-                       >
-                         {dateObj.toLocaleDateString('en-US', { weekday: 'short' })} {dateObj.getDate()}
-                       </button>
-                       {auth.active ? (
-                         <div className="flex flex-1 items-center gap-2">
-                           <input 
-                             type="time" 
-                             value={auth.start}
-                             onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], start: e.target.value}}))}
-                             className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-xs outline-none" 
-                           />
-                           <span className="text-gray-400 text-xs">-</span>
-                           <input 
-                             type="time" 
-                             value={auth.end}
-                             onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], end: e.target.value}}))}
-                             className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-xs outline-none" 
-                           />
-                         </div>
-                       ) : (
-                         <div className="flex-1 text-xs text-gray-400 ml-2 font-medium">Unavailable</div>
-                       )}
-                    </div>
-                  ); })}
-                </div>
-              )}
+              <div className="space-y-3">
+                {Object.entries(workerAvailability).map(([day, auth]: [string, any]) => {
+                  const dateObj = new Date(day);
+                  return (
+                  <div key={day} className="flex items-center gap-2">
+                     <button 
+                       onClick={() => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], active: !prev[day].active}}))}
+                       className={cn("w-16 py-1.5 rounded-lg text-[10px] font-bold transition-colors", auth.active ? "bg-accent text-white" : "bg-gray-100 text-gray-400")}
+                     >
+                       {dateObj.toLocaleDateString('en-US', { weekday: 'short' })} {dateObj.getDate()}
+                     </button>
+                     {auth.active ? (
+                       <div className="flex flex-1 items-center gap-2">
+                         <input 
+                           type="time" 
+                           value={auth.start}
+                           onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], start: e.target.value}}))}
+                           className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-xs outline-none" 
+                         />
+                         <span className="text-gray-400 text-xs">-</span>
+                         <input 
+                           type="time" 
+                           value={auth.end}
+                           onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], end: e.target.value}}))}
+                           className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-xs outline-none" 
+                         />
+                       </div>
+                     ) : (
+                       <div className="flex-1 text-xs text-gray-400 ml-2 font-medium">Unavailable</div>
+                     )}
+                  </div>
+                ); })}
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -624,34 +649,41 @@ export default function App() {
   };
 
   const WorkerHome = () => {
-    const [search, setSearch] = useState('');
-    const [filter, setFilter] = useState('All Gigs');
-    const [sortBy, setSortBy] = useState('Recommended');
-
     let displayedJobs = jobs.filter(job => {
-      const matchesSearch = job.subType.toLowerCase().includes(search.toLowerCase()) || 
-                            job.tenderName.toLowerCase().includes(search.toLowerCase()) || 
-                            job.location.toLowerCase().includes(search.toLowerCase()) || 
-                            job.type.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = job.subType.toLowerCase().includes(homeSearch.toLowerCase()) || 
+                            job.tenderName.toLowerCase().includes(homeSearch.toLowerCase()) || 
+                            job.location.toLowerCase().includes(homeSearch.toLowerCase()) || 
+                            job.type.toLowerCase().includes(homeSearch.toLowerCase());
       
       const p = parseInt(job.pay.replace(/[^0-9]/g, ''));
-      const matchesFilter = filter === 'All Gigs' ? true :
-                            filter === 'Catering' ? job.type === 'Catering' :
-                            filter === 'Shifting' ? job.type === 'Home Shifting' :
-                            filter === 'Tomorrow' ? job.date.includes('12 May') : 
-                            filter === 'Pay > ₹1000' ? p > 1000 : true;
+      const tmrw = new Date();
+      tmrw.setDate(tmrw.getDate() + 1);
+      const tomorrowFormatted = `${tmrw.toLocaleDateString('en-US', { weekday: 'short' })}, ${tmrw.getDate()} ${tmrw.toLocaleDateString('en-US', { month: 'short' })}`;
 
-      return matchesSearch && matchesFilter;
+      const matchesFilter = homeFilter === 'All Gigs' ? true :
+                            homeFilter === 'Catering' ? job.type === 'Catering' :
+                            homeFilter === 'Shifting' ? job.type === 'Home Shifting' :
+                            homeFilter === 'Tomorrow' ? job.date.includes(tomorrowFormatted) : 
+                            homeFilter === 'Pay > ₹1000' ? p > 1000 : true;
+
+      let matchesDate = true;
+      if (homeDateFilter) {
+          const filterDate = new Date(homeDateFilter);
+          const filterDateFormatted = `${filterDate.toLocaleDateString('en-US', { weekday: 'short' })}, ${filterDate.getDate()} ${filterDate.toLocaleDateString('en-US', { month: 'short' })}`.toLowerCase();
+          matchesDate = job.date.toLowerCase() === filterDateFormatted;
+      }
+
+      return matchesSearch && matchesFilter && matchesDate;
     });
 
     displayedJobs.sort((a, b) => {
-       if (sortBy === 'Distance') {
+       if (homeSortBy === 'Distance') {
           return parseFloat(a.distance) - parseFloat(b.distance);
-       } else if (sortBy === 'Pay') {
+       } else if (homeSortBy === 'Pay') {
           const am = parseInt(a.pay.replace(/[^0-9]/g, ''));
           const bm = parseInt(b.pay.replace(/[^0-9]/g, ''));
           return bm - am;
-       } else if (sortBy === 'Rating') {
+       } else if (homeSortBy === 'Rating') {
           return (b.tenderRating || 0) - (a.tenderRating || 0);
        }
        return 0; // target 'Recommended' which is the default order
@@ -667,9 +699,13 @@ export default function App() {
               </div>
               <div>
                 <h2 className="font-bold">{workerName ? `Hey ${workerName.split(' ')[0]}!` : 'Hey!'} 👋</h2>
-                <div className="flex items-center gap-1">
-                  <div className={cn("w-2 h-2 rounded-full", isAvailable ? "bg-success" : "bg-error")} />
-                  <span className="text-[10px] text-text-secondary">{isAvailable ? 'Available' : 'Invisible'}</span>
+                <div 
+                  className="flex items-center gap-1 cursor-pointer"
+                  onClick={() => navigate('worker_profile')}
+                >
+                  <div className={cn("w-2 h-2 rounded-full", isAvailableToday ? "bg-success" : "bg-gray-400")} />
+                  <span className="text-[10px] text-text-secondary">{isAvailableToday ? 'Available today \u00B7 9:00 AM\u20136:00 PM' : 'Not available today'}</span>
+                  <span className="text-[10px] text-accent ml-1 underline">Set Availability</span>
                 </div>
               </div>
             </div>
@@ -685,17 +721,43 @@ export default function App() {
               type="text" 
               placeholder="Find gigs in Bengaluru" 
               className="w-full bg-gray-50 border border-gray-200 rounded-lg py-3 pl-10 pr-4 outline-none focus:border-accent"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={homeSearch}
+              onChange={(e) => setHomeSearch(e.target.value)}
             />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+            {Array.from({length: 7}).map((_, i) => {
+              const d = new Date();
+              d.setDate(d.getDate() + i);
+              const dateStr = d.toISOString().split('T')[0];
+              const isSelected = homeDateFilter === dateStr;
+              
+              const formattedJobDateStr = `${d.toLocaleDateString('en-US', { weekday: 'short' })}, ${d.getDate()} ${d.toLocaleDateString('en-US', { month: 'short' })}`.toLowerCase();
+              const hasGigs = jobs.some(j => j.date.toLowerCase() === formattedJobDateStr);
+
+              return (
+                <button 
+                  key={dateStr} 
+                  onClick={() => setHomeDateFilter(isSelected ? null : dateStr)}
+                  className={cn("flex flex-col items-center justify-center p-2 rounded-xl min-w-[50px] border transition-colors", 
+                    isSelected ? "bg-accent/10 border-accent/30" : "bg-gray-50 border-gray-100 hover:border-gray-200"
+                  )}
+                >
+                  <span className={cn("text-[9px] font-bold", isSelected ? "text-accent" : "text-gray-400")}>{d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</span>
+                  <span className={cn("text-xs font-bold my-0.5", isSelected ? "text-accent" : "text-gray-600")}>{d.getDate()}</span>
+                  <div className={cn("w-1.5 h-1.5 rounded-full mt-1", hasGigs ? "bg-accent" : "bg-gray-200")} />
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
             {['All Gigs', 'Catering', 'Shifting', 'Tomorrow', 'Pay > ₹1000'].map((f) => (
               <button 
                 key={f} 
-                onClick={() => setFilter(f)}
-                className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors", filter === f ? "bg-accent text-white" : "bg-white border text-text-secondary shadow-sm hover:border-accent")}
+                onClick={() => setHomeFilter(f)}
+                className={cn("px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors", homeFilter === f ? "bg-accent text-white" : "bg-white border text-text-secondary shadow-sm hover:border-accent")}
               >
                 {f}
               </button>
@@ -707,8 +769,8 @@ export default function App() {
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-bold">Gigs Near You</h3>
             <select 
-               value={sortBy} 
-               onChange={(e) => setSortBy(e.target.value)}
+               value={homeSortBy} 
+               onChange={(e) => setHomeSortBy(e.target.value)}
                className="bg-transparent text-xs font-bold text-accent outline-none ml-2"
             >
                <option value="Recommended">Recommended</option>
@@ -917,7 +979,9 @@ export default function App() {
           >
              Edit Profile
           </button>
-          <SettingsIcon />
+          <button onClick={() => navigate('role_selection')} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <LogOut size={18} />
+          </button>
         </div>
 
         <div className="flex flex-col items-center">
@@ -950,30 +1014,56 @@ export default function App() {
       <div className="px-6 space-y-6 pb-20">
         <div className="p-4 bg-white rounded-2xl shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold">Availability</h3>
-            <div 
-              onClick={() => setIsAvailable(!isAvailable)}
-              className={cn("w-12 h-6 rounded-full p-1 cursor-pointer transition-colors", isAvailable ? "bg-success" : "bg-gray-300")}
-            >
-              <div className={cn("w-4 h-4 bg-white rounded-full transition-transform", isAvailable ? "translate-x-6" : "translate-x-0")} />
-            </div>
+            <h3 className="font-bold">My Availability</h3>
+            <Edit2 size={16} className="text-gray-400" />
           </div>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-            {Object.keys(workerAvailability).map((d) => {
-              const active = isAvailable && workerAvailability[d]?.active;
-              const dateObj = new Date(d);
+          
+          <div className="space-y-3">
+            {Object.entries(workerAvailability).map(([day, auth]: [string, any]) => {
+              const dateObj = new Date(day);
+              // Using a simple toggle for active, but if active, expanding inline times
               return (
-                <div key={d} className={cn("flex flex-col items-center p-2 rounded-xl min-w-[70px] border", active ? "bg-success/10 border-success/20" : "bg-gray-50 border-gray-100")}>
-                  <span className={cn("text-[10px] font-bold", active ? "text-success" : "text-gray-400")}>{dateObj.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}</span>
-                  <span className={cn("text-[9px] font-bold mb-1", active ? "text-success/80" : "text-gray-400/80")}>{dateObj.getDate()} {dateObj.toLocaleDateString('en-US', { month: 'short' })}</span>
-                  {active ? (
-                    <div className="text-[9px] font-bold text-gray-600 flex flex-col items-center">
-                      <span>{workerAvailability[d].start}</span>
-                      <span className="text-gray-400 leading-none">-</span>
-                      <span>{workerAvailability[d].end}</span>
+                <div key={day} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                       <div className={cn("w-10 h-10 rounded-full flex flex-col items-center justify-center shadow-sm border", auth.active ? "bg-accent/10 border-accent/20 text-accent" : "bg-white border-gray-200 text-gray-400")}>
+                         <span className="text-[10px] font-bold uppercase">{dateObj.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                         <span className="text-xs font-bold leading-none">{dateObj.getDate()}</span>
+                       </div>
+                       <div>
+                         <p className={cn("text-sm font-bold", auth.active ? "text-gray-800" : "text-gray-400")}>
+                           {dateObj.toLocaleDateString('en-US', { weekday: 'long' })}
+                         </p>
+                         <p className="text-[10px] text-gray-500">{dateObj.getDate()} {dateObj.toLocaleDateString('en-US', { month: 'short' })}</p>
+                       </div>
                     </div>
-                  ) : (
-                    <span className="text-[9px] font-bold text-gray-400 mt-2">Off</span>
+                    
+                    <button
+                      onClick={() => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], active: !prev[day].active}}))}
+                      className={cn("relative flex items-center w-14 h-7 rounded-full transition-colors shadow-inner focus:outline-none", auth.active ? "bg-success" : "bg-gray-300")}
+                    >
+                      <span className={cn("absolute left-[6px] text-[9px] font-bold text-white transition-opacity", auth.active ? "opacity-100" : "opacity-0")}>ON</span>
+                      <span className={cn("absolute right-[5px] text-[9px] font-bold text-gray-600 transition-opacity", auth.active ? "opacity-0" : "opacity-100")}>OFF</span>
+                      <div className={cn("absolute left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform", auth.active ? "translate-x-7" : "translate-x-0")} />
+                    </button>
+                  </div>
+
+                  {auth.active && (
+                    <div className="flex items-center gap-2 mt-2 ml-[52px]">
+                      <input 
+                        type="time" 
+                        value={auth.start}
+                        onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], start: e.target.value}}))}
+                        className="w-24 bg-white border border-gray-200 rounded-lg p-2 text-xs font-bold text-gray-700 outline-none focus:border-accent shadow-sm" 
+                      />
+                      <span className="text-gray-400 text-xs">-</span>
+                      <input 
+                        type="time" 
+                        value={auth.end}
+                        onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], end: e.target.value}}))}
+                        className="w-24 bg-white border border-gray-200 rounded-lg p-2 text-xs font-bold text-gray-700 outline-none focus:border-accent shadow-sm" 
+                      />
+                    </div>
                   )}
                 </div>
               );
@@ -996,26 +1086,6 @@ export default function App() {
             <ReviewItem name="Annapurna Events" rating={4} text="Good work, could improve communication." date="1 week ago" />
         </div>
       </div>
-    </div>
-  );
-
-  const ProfileStat = ({ label, value }: { label: string, value: string }) => (
-    <div className="bg-bg-light p-3 rounded-2xl flex flex-col items-center">
-      <span className="text-[10px] font-bold text-text-secondary uppercase mb-1">{label}</span>
-      <span className="text-lg font-bold text-primary">{value}</span>
-    </div>
-  );
-
-  const ReviewItem = ({ name, rating, text, date }: { name: string, rating: number, text: string, date: string }) => (
-    <div className="p-4 bg-white rounded-xl shadow-sm space-y-2">
-      <div className="flex justify-between items-start">
-        <h4 className="font-bold text-sm">{name}</h4>
-        <span className="text-[10px] text-gray-400">{date}</span>
-      </div>
-      <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map(i => <Star key={i} size={12} className={cn(i <= rating ? "text-yellow-400 fill-current" : "text-gray-200")} />)}
-      </div>
-      <p className="text-xs text-text-secondary">{text}</p>
     </div>
   );
 
@@ -1793,7 +1863,7 @@ export default function App() {
   // --- Main Render Updated Again ---
 
   return (
-    <PhoneFrame hideNav={currentScreen === 'splash'}>
+    <PhoneFrame hideNav={currentScreen === 'splash' || currentScreen === 'role_selection' || currentScreen === 'auth' || currentScreen === 'worker_setup' || currentScreen === 'tender_setup' || currentScreen === 'chat'} currentScreen={currentScreen} role={role} navigate={navigate}>
       <AnimatePresence mode="wait">
         <motion.div
            key={currentScreen}
@@ -1808,9 +1878,9 @@ export default function App() {
           {currentScreen === 'role_selection' && <RoleSelection />}
           {currentScreen === 'auth' && <AuthScreen />}
           {currentScreen === 'worker_setup' && <WorkerSetup />}
-          {currentScreen === 'worker_home' && <WorkerHome />}
+          {currentScreen === 'worker_home' && WorkerHome()}
           {currentScreen === 'job_detail' && <JobDetail />}
-          {currentScreen === 'worker_profile' && <WorkerProfile />}
+          {currentScreen === 'worker_profile' && WorkerProfile()}
           {currentScreen === 'my_jobs' && <MyJobsScreen />}
           
           {/* Tender Screens */}
@@ -1826,7 +1896,7 @@ export default function App() {
           {currentScreen === 'payments' && <PaymentsScreen />}
           {currentScreen === 'review_rating' && <ReviewRatingScreen />}
           {/* Tender Profile uses similar layout, just needs navigate mapping */}
-          {currentScreen === 'tender_profile' && <WorkerProfile />} 
+          {currentScreen === 'tender_profile' && WorkerProfile()} 
         </motion.div>
       </AnimatePresence>
     </PhoneFrame>
