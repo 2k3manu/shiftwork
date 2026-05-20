@@ -1447,7 +1447,7 @@ export default function App() {
             <div className="bg-white p-4 rounded-2xl shadow-sm space-y-3">
                <ChatMessage name="Rahul" text="Hey team! I'm taking the metro, will reach by 5:15." time="10:30 AM" isMe />
                <ChatMessage name="Priya" text="I'll take an auto, should be there by 5:30!" time="10:45 AM" />
-               <Button variant="ghost" className="text-xs py-2 h-auto text-accent">Open Group Chat</Button>
+               <Button variant="ghost" onClick={() => navigate('chat')} className="text-xs py-2 h-auto text-accent">Open Group Chat</Button>
             </div>
           </div>
        </div>
