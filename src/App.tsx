@@ -71,12 +71,14 @@ const PhoneFrame = ({ children, hideNav = false, currentScreen, role, navigate }
             active={currentScreen === (role === 'worker' ? 'worker_home' : 'tender_home')} 
             onClick={() => navigate(role === 'worker' ? 'worker_home' : 'tender_home')}
           />
-          <NavIcon 
-            icon={role === 'worker' ? <Briefcase size={24} /> : <Menu size={24} />} 
-            label={role === 'worker' ? "My Jobs" : "Listings"} 
-            active={currentScreen === 'my_jobs' || currentScreen === 'listings'} 
-            onClick={() => navigate(role === 'worker' ? 'my_jobs' : 'tender_home')}
-          />
+          {role === 'worker' && (
+            <NavIcon 
+              icon={<Briefcase size={24} />} 
+              label="My Jobs" 
+              active={currentScreen === 'my_jobs'} 
+              onClick={() => navigate('my_jobs')}
+            />
+          )}
           <NavIcon 
             icon={<MessageCircle size={24} />} 
             label={role === 'worker' ? "Co-Workers" : "Applicants"} 
@@ -285,32 +287,37 @@ export default function App() {
   );
 
   const AuthScreen = () => {
-    const [tab, setTab] = useState<'signup' | 'login'>('signup');
+    const [loginMethod, setLoginMethod] = useState<'options' | 'phone'>('options');
     const [phone, setPhone] = useState('');
     const [showOtp, setShowOtp] = useState(false);
-    const [otp, setOtp] = useState(['', '', '', '']);
+    const [otp, setOtp] = useState(['', '', '', '', '', '']);
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-    useEffect(() => {
-      if (phone.length === 10 && !showOtp) {
-        setShowOtp(true);
-      }
-    }, [phone, showOtp]);
+    const handleMockLogin = () => {
+      setIsLoggingIn(true);
+      setTimeout(() => {
+        setIsLoggingIn(false);
+        navigate(role === 'worker' ? 'worker_setup' : 'tender_setup');
+      }, 500);
+    };
 
     const handleSendOtp = () => {
       if (/^\d{10}$/.test(phone)) {
-        setShowOtp(true);
+        setIsLoggingIn(true);
+        setTimeout(() => {
+          setIsLoggingIn(false);
+          setShowOtp(true);
+        }, 500);
       }
     };
 
     const handleVerifyOtp = () => {
-      if (otp.join('').length === 4) {
-        if (tab === 'login') {
-          // If login, immediately go to home
-          navigate(role === 'worker' ? 'worker_home' : 'tender_home');
-        } else {
-          // If signup, go to setup
+      if (otp.join('').length === 6) {
+        setIsLoggingIn(true);
+        setTimeout(() => {
+          setIsLoggingIn(false);
           navigate(role === 'worker' ? 'worker_setup' : 'tender_setup');
-        }
+        }, 500);
       }
     };
 
@@ -319,8 +326,7 @@ export default function App() {
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
-        // Auto focus next logic could be added here, but keeping it simple
-        if (value && index < 3) {
+        if (value && index < 5) {
           const nextInput = document.getElementById(`otp-${index + 1}`);
           if (nextInput) nextInput.focus();
         }
@@ -328,99 +334,93 @@ export default function App() {
     };
 
     return (
-      <div className="h-full p-8 flex flex-col bg-white overflow-y-auto no-scrollbar pb-24">
-        <button onClick={() => navigate('role_selection')} className="mb-8 mt-4">
+      <div className="h-full p-8 flex flex-col bg-white overflow-y-auto no-scrollbar pb-24 items-center justify-center">
+        <button onClick={() => loginMethod === 'phone' ? setLoginMethod('options') : navigate('role_selection')} className="absolute top-12 left-8">
           <ArrowLeft size={24} />
         </button>
 
-        <div className="flex bg-gray-100 p-1 rounded-lg mb-10">
-          <button 
-            className={cn("flex-1 py-2.5 rounded-md text-sm font-bold transition-all", tab === 'signup' ? "bg-white shadow-sm text-primary" : "text-gray-400")}
-            onClick={() => setTab('signup')}
-          >
-            Sign Up
-          </button>
-          <button 
-            className={cn("flex-1 py-2.5 rounded-md text-sm font-bold transition-all", tab === 'login' ? "bg-white shadow-sm text-primary" : "text-gray-400")}
-            onClick={() => setTab('login')}
-          >
-            Log In
-          </button>
+        <div className="w-24 h-24 bg-blue-50 rounded-3xl flex items-center justify-center shadow-sm mb-8">
+          <Briefcase size={48} className="text-primary" />
         </div>
 
-        <h2 className="text-2xl font-bold mb-2">Hello {role === 'worker' ? 'Student' : 'Tender'}!</h2>
-        <p className="text-text-secondary mb-8">Enter your phone number to {tab === 'signup' ? 'create an account' : 'log in'}</p>
+        <h2 className="text-2xl font-bold mb-2 text-center">Welcome to ShiftWork</h2>
+        <p className="text-text-secondary mb-12 text-center">Sign in to continue as a {role === 'worker' ? 'Worker' : 'Tender'}</p>
 
-        <div className="space-y-6 flex-1">
-          {!showOtp ? (
-            <>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-gray-700">Phone Number</label>
-                <div className="flex gap-3">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 flex items-center font-bold">+91</div>
-                  <input 
-                    type="tel" 
-                    value={phone}
-                    maxLength={10}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="0000000000" 
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-3 outline-none focus:border-accent" 
-                  />
-                </div>
-              </div>
+        {loginMethod === 'options' ? (
+          <div className="w-full space-y-4 flex-1 flex flex-col items-center">
+            <button onClick={handleMockLogin} disabled={isLoggingIn} className="gsi-material-button text-gray-700 bg-white border border-gray-300 w-full py-3 rounded-lg shadow-sm flex items-center justify-center gap-3 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50">
+              <img src="https://www.google.com/favicon.ico" className="w-5 h-5" alt="Google" /> 
+              {isLoggingIn ? 'Signing in...' : 'Sign in with Google'}
+            </button>
+            
+            <div className="relative py-4 w-full">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-gray-500 font-medium">Or</span></div>
+            </div>
 
-              <Button onClick={handleSendOtp} disabled={phone.length !== 10}>
-                Send OTP
-              </Button>
-
-              <div className="relative py-4">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-gray-500 font-medium">Or continue with</span></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <button className="flex items-center justify-center gap-2 p-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50">
-                  <img src="https://www.google.com/favicon.ico" className="w-4 h-4" alt="Google" /> Google
-                </button>
-                <button className="flex items-center justify-center gap-2 p-3 border border-gray-200 rounded-lg font-medium hover:bg-gray-50">
-                  <img src="https://www.apple.com/favicon.ico" className="w-4 h-4" alt="Apple" /> Apple
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="space-y-2 mb-8">
-                <label className="text-sm font-bold text-gray-700">Enter 4-digit OTP</label>
-                <div className="flex gap-4 justify-between">
-                  {otp.map((digit, i) => (
-                    <input
-                      key={i}
-                      id={`otp-${i}`}
-                      type="tel"
-                      value={digit}
-                      onChange={(e) => handleOtpChange(i, e.target.value)}
-                      className="w-14 h-14 bg-gray-50 border border-gray-200 rounded-xl text-center text-xl font-bold outline-none focus:border-accent"
-                      maxLength={1}
+            <button onClick={() => { setLoginMethod('phone'); setOtp(['','','','','','']); }} disabled={isLoggingIn} className="text-white bg-accent w-full py-3 rounded-lg shadow-sm flex items-center justify-center gap-3 font-medium hover:bg-accent/90 transition-colors disabled:opacity-50">
+              <Phone size={18} /> Sign in with Phone
+            </button>
+          </div>
+        ) : (
+          <div className="w-full space-y-6 flex-1">
+            {!showOtp ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-700">Phone Number</label>
+                  <div className="flex gap-3">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 flex items-center font-bold">+91</div>
+                    <input 
+                      type="tel" 
+                      value={phone}
+                      maxLength={10}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="0000000000" 
+                      className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-3 outline-none focus:border-accent" 
                     />
-                  ))}
+                  </div>
                 </div>
-              </div>
 
-              <Button onClick={handleVerifyOtp} disabled={otp.join('').length !== 4}>
-                Verify & Continue
-              </Button>
-              <button 
-                onClick={() => setShowOtp(false)}
-                className="w-full mt-4 text-sm font-bold text-gray-500 hover:text-accent transition-colors"
-              >
-                Change Phone Number
-              </button>
-            </>
-          )}
-        </div>
+                <Button onClick={handleSendOtp} disabled={phone.length !== 10 || isLoggingIn}>
+                  {isLoggingIn ? 'Sending...' : 'Send OTP'}
+                </Button>
 
+              </>
+            ) : (
+              <>
+                <div className="space-y-2 mb-8">
+                  <label className="text-sm font-bold text-gray-700">Enter 6-digit OTP</label>
+                  <div className="flex gap-2 justify-between">
+                    {otp.map((digit, i) => (
+                      <input
+                        key={i}
+                        id={`otp-${i}`}
+                        type="tel"
+                        value={digit}
+                        onChange={(e) => handleOtpChange(i, e.target.value)}
+                        className="w-10 h-12 bg-gray-50 border border-gray-200 rounded-xl text-center text-xl font-bold outline-none focus:border-accent"
+                        maxLength={1}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <Button onClick={handleVerifyOtp} disabled={otp.join('').length !== 6 || isLoggingIn}>
+                  {isLoggingIn ? 'Verifying...' : 'Verify & Continue'}
+                </Button>
+                <button 
+                  onClick={() => setShowOtp(false)}
+                  className="w-full mt-4 text-sm font-bold text-gray-500 hover:text-accent transition-colors"
+                >
+                  Change Phone Number
+                </button>
+              </>
+            )}
+          </div>
+        )}
+        
         <p className="text-[10px] text-center text-gray-400 mt-8 mb-4">
-          By continuing, you agree to ShiftWork's <span className="underline">Terms of Service</span> and <span className="underline">Privacy Policy</span>
+          By continuing, you agree to ShiftWork's <span className="underline">Terms of Service</span>
         </p>
       </div>
     );
@@ -940,7 +940,7 @@ export default function App() {
 
         <div className="p-6 safe-area-bottom shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
            <Button onClick={() => {
-             const updatedJobs = jobs.map(j => j.id === selectedJob.id ? {...j, status: 'applied'} as Job : j);
+             const updatedJobs = jobs.map(j => j.id === selectedJob.id ? {...j, status: selectedJob.status === 'applied' ? 'pending' : 'applied'} as Job : j);
              setJobs(updatedJobs);
              navigate('worker_home');
            }}>
@@ -1012,64 +1012,66 @@ export default function App() {
       </div>
 
       <div className="px-6 space-y-6 pb-20">
-        <div className="p-4 bg-white rounded-2xl shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold">My Availability</h3>
-            <Edit2 size={16} className="text-gray-400" />
-          </div>
-          
-          <div className="space-y-3">
-            {Object.entries(workerAvailability).map(([day, auth]: [string, any]) => {
-              const dateObj = new Date(day);
-              // Using a simple toggle for active, but if active, expanding inline times
-              return (
-                <div key={day} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                       <div className={cn("w-10 h-10 rounded-full flex flex-col items-center justify-center shadow-sm border", auth.active ? "bg-accent/10 border-accent/20 text-accent" : "bg-white border-gray-200 text-gray-400")}>
-                         <span className="text-[10px] font-bold uppercase">{dateObj.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                         <span className="text-xs font-bold leading-none">{dateObj.getDate()}</span>
-                       </div>
-                       <div>
-                         <p className={cn("text-sm font-bold", auth.active ? "text-gray-800" : "text-gray-400")}>
-                           {dateObj.toLocaleDateString('en-US', { weekday: 'long' })}
-                         </p>
-                         <p className="text-[10px] text-gray-500">{dateObj.getDate()} {dateObj.toLocaleDateString('en-US', { month: 'short' })}</p>
-                       </div>
+        {role === 'worker' && (
+          <div className="p-4 bg-white rounded-2xl shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold">My Availability</h3>
+              <Edit2 size={16} className="text-gray-400" />
+            </div>
+            
+            <div className="space-y-3">
+              {Object.entries(workerAvailability).map(([day, auth]: [string, any]) => {
+                const dateObj = new Date(day);
+                // Using a simple toggle for active, but if active, expanding inline times
+                return (
+                  <div key={day} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                         <div className={cn("w-10 h-10 rounded-full flex flex-col items-center justify-center shadow-sm border", auth.active ? "bg-accent/10 border-accent/20 text-accent" : "bg-white border-gray-200 text-gray-400")}>
+                           <span className="text-[10px] font-bold uppercase">{dateObj.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                           <span className="text-xs font-bold leading-none">{dateObj.getDate()}</span>
+                         </div>
+                         <div>
+                           <p className={cn("text-sm font-bold", auth.active ? "text-gray-800" : "text-gray-400")}>
+                             {dateObj.toLocaleDateString('en-US', { weekday: 'long' })}
+                           </p>
+                           <p className="text-[10px] text-gray-500">{dateObj.getDate()} {dateObj.toLocaleDateString('en-US', { month: 'short' })}</p>
+                         </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], active: !prev[day].active}}))}
+                        className={cn("relative flex items-center w-14 h-7 rounded-full transition-colors shadow-inner focus:outline-none", auth.active ? "bg-success" : "bg-gray-300")}
+                      >
+                        <span className={cn("absolute left-[6px] text-[9px] font-bold text-white transition-opacity", auth.active ? "opacity-100" : "opacity-0")}>ON</span>
+                        <span className={cn("absolute right-[5px] text-[9px] font-bold text-gray-600 transition-opacity", auth.active ? "opacity-0" : "opacity-100")}>OFF</span>
+                        <div className={cn("absolute left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform", auth.active ? "translate-x-7" : "translate-x-0")} />
+                      </button>
                     </div>
-                    
-                    <button
-                      onClick={() => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], active: !prev[day].active}}))}
-                      className={cn("relative flex items-center w-14 h-7 rounded-full transition-colors shadow-inner focus:outline-none", auth.active ? "bg-success" : "bg-gray-300")}
-                    >
-                      <span className={cn("absolute left-[6px] text-[9px] font-bold text-white transition-opacity", auth.active ? "opacity-100" : "opacity-0")}>ON</span>
-                      <span className={cn("absolute right-[5px] text-[9px] font-bold text-gray-600 transition-opacity", auth.active ? "opacity-0" : "opacity-100")}>OFF</span>
-                      <div className={cn("absolute left-1 w-5 h-5 bg-white rounded-full shadow-sm transition-transform", auth.active ? "translate-x-7" : "translate-x-0")} />
-                    </button>
-                  </div>
 
-                  {auth.active && (
-                    <div className="flex items-center gap-2 mt-2 ml-[52px]">
-                      <input 
-                        type="time" 
-                        value={auth.start}
-                        onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], start: e.target.value}}))}
-                        className="w-24 bg-white border border-gray-200 rounded-lg p-2 text-xs font-bold text-gray-700 outline-none focus:border-accent shadow-sm" 
-                      />
-                      <span className="text-gray-400 text-xs">-</span>
-                      <input 
-                        type="time" 
-                        value={auth.end}
-                        onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], end: e.target.value}}))}
-                        className="w-24 bg-white border border-gray-200 rounded-lg p-2 text-xs font-bold text-gray-700 outline-none focus:border-accent shadow-sm" 
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    {auth.active && (
+                      <div className="flex items-center gap-2 mt-2 ml-[52px]">
+                        <input 
+                          type="time" 
+                          value={auth.start}
+                          onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], start: e.target.value}}))}
+                          className="w-24 bg-white border border-gray-200 rounded-lg p-2 text-xs font-bold text-gray-700 outline-none focus:border-accent shadow-sm" 
+                        />
+                        <span className="text-gray-400 text-xs">-</span>
+                        <input 
+                          type="time" 
+                          value={auth.end}
+                          onChange={(e) => setWorkerAvailability(prev => ({...prev, [day]: {...prev[day], end: e.target.value}}))}
+                          className="w-24 bg-white border border-gray-200 rounded-lg p-2 text-xs font-bold text-gray-700 outline-none focus:border-accent shadow-sm" 
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="space-y-3">
           <h3 className="font-bold px-1">Skills</h3>
@@ -1199,6 +1201,41 @@ export default function App() {
 
   const JobPostingFlow = () => {
     const [step, setStep] = useState(1);
+    const [isPosting, setIsPosting] = useState(false);
+    const [jobType, setJobType] = useState('Catering');
+    const [workersNeeded, setWorkersNeeded] = useState(4);
+
+    const handlePostJob = async () => {
+      setIsPosting(true);
+      setTimeout(() => {
+        const jobId = `job_${Date.now()}`;
+        const newJob: Job = {
+          id: jobId,
+          tenderName: tenderName || 'Sai Caterers',
+          tenderRating: 4.8,
+          isVerified: true,
+          type: jobType,
+          subType: jobType === 'Catering' ? 'Bokeh Serving' : 'House Shifting',
+          date: 'Sun, 11 May',
+          time: '6:00 PM - 11:00 PM',
+          location: 'Indiranagar',
+          distance: '0.8 km away',
+          pay: '₹180/hr',
+          payType: 'hourly',
+          transport: 'Nearest Metro: Indiranagar (500m) | Auto recommended',
+          foodType: 'Veg & Non-Veg',
+          spotsFilled: 0,
+          spotsTotal: workersNeeded,
+          status: 'pending',
+          travel: 'No',
+          food: 'Yes'
+        };
+        setJobs([newJob, ...jobs]);
+        setIsPosting(false);
+        navigate('tender_home');
+      }, 500);
+    };
+
     return (
       <div className="h-full bg-white flex flex-col">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
@@ -1223,15 +1260,15 @@ export default function App() {
             <div className="space-y-6">
               <h3 className="text-xl font-bold">Job Basics</h3>
               <div className="grid grid-cols-2 gap-4">
-                <OptionCard icon={<ChefHat />} label="Catering" selected />
-                <OptionCard icon={<Truck />} label="Shifting" />
+                <OptionCard icon={<ChefHat />} label="Catering" selected={jobType === 'Catering'} onClick={() => setJobType('Catering')} />
+                <OptionCard icon={<Truck />} label="Shifting" selected={jobType === 'Shifting'} onClick={() => setJobType('Shifting')} />
               </div>
               <div className="space-y-3">
                 <label className="text-sm font-bold text-gray-700">Workers Needed</label>
                 <div className="flex items-center gap-6 bg-bg-light p-2 rounded-xl w-fit">
-                  <button className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center font-bold text-xl">-</button>
-                  <span className="text-xl font-bold">4</span>
-                  <button className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center font-bold text-xl">+</button>
+                  <button onClick={() => setWorkersNeeded(Math.max(1, workersNeeded - 1))} className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center font-bold text-xl">-</button>
+                  <span className="text-xl font-bold w-4 text-center">{workersNeeded}</span>
+                  <button onClick={() => setWorkersNeeded(workersNeeded + 1)} className="w-10 h-10 bg-white rounded-lg shadow-sm flex items-center justify-center font-bold text-xl">+</button>
                 </div>
               </div>
               <Button onClick={() => setStep(2)}>Next Step</Button>
@@ -1303,7 +1340,7 @@ export default function App() {
                 <input type="checkbox" className="w-5 h-5 rounded border-gray-300 text-accent focus:ring-accent" />
                 <span className="text-xs text-gray-500 font-medium">I agree to ShiftWork's platform terms</span>
               </div>
-              <Button onClick={() => { navigate('tender_home'); }}>Post Job Slot</Button>
+              <Button onClick={handlePostJob} disabled={isPosting}>{isPosting ? 'Posting...' : 'Post Job Slot'}</Button>
             </div>
           )}
         </div>
@@ -1407,54 +1444,69 @@ export default function App() {
     </div>
   );
 
-  const CoworkerConnect = () => (
-    <div className="h-full bg-bg-light flex flex-col">
-       <div className="p-6 bg-white shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate(role === 'worker' ? 'worker_home' : 'tender_home')}><ArrowLeft size={24} /></button>
-            <div>
-              <h2 className="font-bold text-lg">Your Team</h2>
-              <p className="text-[10px] text-text-secondary font-bold">BOKEH SERVING · 11 MAY</p>
+  const CoworkerConnect = () => {
+    const [team, setTeam] = useState<any[]>([
+      { id: '1', email: 'priya@mock.com', phoneNumber: '+919876543210', photo: 'https://i.pravatar.cc/100?u=a2' },
+      { id: '2', email: 'meena@mock.com', phoneNumber: '+919998887776', photo: 'https://i.pravatar.cc/100?u=a4' }
+    ]);
+
+    return (
+      <div className="h-full bg-bg-light flex flex-col">
+         <div className="p-6 bg-white shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button onClick={() => navigate(role === 'worker' ? 'worker_home' : 'tender_home')}><ArrowLeft size={24} /></button>
+              <div>
+                <h2 className="font-bold text-lg">Your Team</h2>
+                <p className="text-[10px] text-text-secondary font-bold">BOKEH SERVING · 11 MAY</p>
+              </div>
             </div>
-          </div>
-          <button 
-            onClick={() => navigate('chat')}
-            className="w-10 h-10 bg-green-50 text-success rounded-full flex items-center justify-center relative"
-          >
-            <MessageCircle size={20} />
-            <div className="absolute top-0 right-0 w-3 h-3 bg-error rounded-full border-2 border-white" />
-          </button>
-       </div>
+            <button 
+              onClick={() => navigate('chat')}
+              className="w-10 h-10 bg-green-50 text-success rounded-full flex items-center justify-center relative"
+            >
+              <MessageCircle size={20} />
+              <div className="absolute top-0 right-0 w-3 h-3 bg-error rounded-full border-2 border-white" />
+            </button>
+         </div>
 
-       <div className="p-6 flex-1 space-y-6 overflow-y-auto no-scrollbar">
-          <div className="space-y-3">
-             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Team Members</h3>
-             <TeamMemberCard name="Priya Nair" rating={4.6} status="Confirmed" photo="https://i.pravatar.cc/100?u=a2" />
-             <TeamMemberCard name="Meena Raj" rating={4.9} status="Confirmed" photo="https://i.pravatar.cc/100?u=a4" />
-          </div>
-
-          <div className="p-4 bg-primary text-white rounded-2xl space-y-4">
-             <h3 className="font-bold text-sm">Transport Coordination</h3>
-             <div className="space-y-3">
-                <CoordItem mode="🚇" name="Rahul" from="Majestic" time="35 min" />
-                <CoordItem mode="🛺" name="Priya" from="Koramangala" time="20 min" />
-                <CoordItem mode="🚶" name="Meena" from="Indiranagar" time="10 min" />
-             </div>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Coordination Chat</h3>
-            <div className="bg-white p-4 rounded-2xl shadow-sm space-y-3">
-               <ChatMessage name="Rahul" text="Hey team! I'm taking the metro, will reach by 5:15." time="10:30 AM" isMe />
-               <ChatMessage name="Priya" text="I'll take an auto, should be there by 5:30!" time="10:45 AM" />
-               <Button variant="ghost" onClick={() => navigate('chat')} className="text-xs py-2 h-auto text-accent">Open Group Chat</Button>
+         <div className="p-6 flex-1 space-y-6 overflow-y-auto no-scrollbar">
+            <div className="space-y-3">
+               <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Team Members</h3>
+               {team.map((worker: any, idx: number) => (
+                  <TeamMemberCard 
+                    key={worker.id || idx}
+                    name={worker.email ? worker.email.split('@')[0] : `Worker ${idx+1}`} 
+                    rating={4.8} 
+                    status="Confirmed" 
+                    photo={worker.photo || `https://i.pravatar.cc/100?u=${worker.id || idx}`}
+                    phoneNumber={worker.phoneNumber}
+                  />
+               ))}
             </div>
-          </div>
-       </div>
-    </div>
-  );
 
-  const TeamMemberCard = ({ name, rating, status, photo }: any) => (
+            <div className="p-4 bg-primary text-white rounded-2xl space-y-4">
+               <h3 className="font-bold text-sm">Transport Coordination</h3>
+               <div className="space-y-3">
+                  <CoordItem mode="🚇" name="Rahul" from="Majestic" time="35 min" />
+                  <CoordItem mode="🛺" name="Priya" from="Koramangala" time="20 min" />
+                  <CoordItem mode="🚶" name="Meena" from="Indiranagar" time="10 min" />
+               </div>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Coordination Chat</h3>
+              <div className="bg-white p-4 rounded-2xl shadow-sm space-y-3">
+                 <ChatMessage name="Rahul" text="Hey team! I'm taking the metro, will reach by 5:15." time="10:30 AM" isMe />
+                 <ChatMessage name="Priya" text="I'll take an auto, should be there by 5:30!" time="10:45 AM" />
+                 <Button variant="ghost" onClick={() => navigate('chat')} className="text-xs py-2 h-auto text-accent">Open Group Chat</Button>
+              </div>
+            </div>
+         </div>
+      </div>
+    );
+  };
+
+  const TeamMemberCard = ({ name, rating, status, photo, phoneNumber }: any) => (
     <div className="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm">
       <div className="flex items-center gap-3">
         <img src={photo} className="w-10 h-10 rounded-full object-cover" alt="" />
@@ -1463,11 +1515,18 @@ export default function App() {
           <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
              <Star size={10} className="text-yellow-400 fill-current" /> {rating} · <span className="text-success">{status}</span>
           </div>
+          {phoneNumber && <div className="text-[10px] text-gray-500 font-medium tracking-wide mt-0.5">{phoneNumber}</div>}
         </div>
       </div>
       <div className="flex gap-2">
-        <button className="p-2 bg-success/10 text-success rounded-lg"><Phone size={14} /></button>
-        <button className="p-2 bg-blue-50 text-blue-600 rounded-lg"><MessageCircle size={14} /></button>
+        {phoneNumber ? (
+          <a href={`tel:${phoneNumber}`} className="p-2 bg-success/10 text-success rounded-lg hover:bg-success/20 transition-colors">
+            <Phone size={14} />
+          </a>
+        ) : (
+          <button className="p-2 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed"><Phone size={14} /></button>
+        )}
+        <button onClick={() => navigate('chat')} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"><MessageCircle size={14} /></button>
       </div>
     </div>
   );
@@ -1491,8 +1550,8 @@ export default function App() {
     </div>
   );
 
-  const OptionCard = ({ icon, label, selected = false }: any) => (
-    <div className={cn("p-4 border-2 rounded-2xl flex flex-col items-center gap-3 transition-all", selected ? "border-accent bg-accent/5 text-accent" : "border-gray-100 text-gray-400")}>
+  const OptionCard = ({ icon, label, selected = false, onClick }: any) => (
+    <div onClick={onClick} className={cn("p-4 border-2 rounded-2xl flex flex-col items-center gap-3 transition-all cursor-pointer", selected ? "border-accent bg-accent/5 text-accent" : "border-gray-100 text-gray-400")}>
       {React.cloneElement(icon, { size: 32 })}
       <span className="text-xs font-bold">{label}</span>
     </div>
@@ -1628,36 +1687,20 @@ export default function App() {
   const ChatScreen = () => {
     const [messages, setMessages] = useState<any[]>([]);
     const [messageInput, setMessageInput] = useState('');
-    const socketRef = useRef<Socket | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const roomId = selectedJob ? selectedJob.id : 'general';
 
+    // Mock initial Google Chat sync
     useEffect(() => {
-      // Connect to websocket server
-      socketRef.current = io({ path: '/socket.io' });
-
-      socketRef.current.on('connect', () => {
-        console.log('Connected to chat server');
-        socketRef.current?.emit('join_room', roomId);
-      });
-
-      socketRef.current.on('past_messages', (pastMessages) => {
-        setMessages(pastMessages);
-        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-      });
-
-      socketRef.current.on('receive_message', (message) => {
-        setMessages((prev) => [...prev, message]);
-        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-      });
-
-      return () => {
-        socketRef.current?.disconnect();
-      };
+      // In a real app we'd fetch actual spaceName stored in Firestore for this gig
+      // e.g. getMessages(gig.chatSpaceName)
+      setMessages([
+        { id: '1', text: 'Welcome to the gig chat!', senderId: 'System', senderRole: 'bot', timestamp: '9:00 AM' }
+      ]);
     }, [roomId]);
 
-    const sendMessage = () => {
-      if (!messageInput.trim() || !socketRef.current) return;
+    const handleSendMessage = async () => {
+      if (!messageInput.trim()) return;
       
       const newMessage = {
         id: Date.now().toString(),
@@ -1667,8 +1710,9 @@ export default function App() {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
-      socketRef.current.emit('send_message', { roomId, message: newMessage });
+      setMessages((prev) => [...prev, newMessage]);
       setMessageInput('');
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     };
 
     return (
@@ -1709,12 +1753,12 @@ export default function App() {
               type="text" 
               value={messageInput}
               onChange={(e) => setMessageInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Type a message..."
               className="flex-1 bg-gray-50 border border-gray-200 rounded-full px-4 py-3 text-sm outline-none focus:border-accent"
             />
             <button 
-              onClick={sendMessage}
+              onClick={handleSendMessage}
               disabled={!messageInput.trim()}
               className="w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center disabled:opacity-50 transition-opacity"
             >
